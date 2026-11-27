@@ -1,6 +1,7 @@
 
 import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
+import { Recording } from "../Record";
 
 export const Home = () => {
   const router = useRouter();
