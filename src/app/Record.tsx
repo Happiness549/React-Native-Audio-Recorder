@@ -1,5 +1,5 @@
 import RecordingScreen from "./components/RecordingScreen";
 
-export const Recording = () => {
+export default function Recording() {
   return <RecordingScreen />;
 }

@@ -1,10 +1,10 @@
 
 import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import { Recording } from "../Record";
 
 export const Home = () => {
   const router = useRouter();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -28,13 +28,13 @@ export const Home = () => {
       <TouchableOpacity
         style={styles.recordButton}
         activeOpacity={0.8}
-        onPress={() => router.push("/recording")}
+        onPress={() => router.push("/Record")}
       >
         <Text style={styles.recordButtonText}>＋ Start Recording</Text>
       </TouchableOpacity>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

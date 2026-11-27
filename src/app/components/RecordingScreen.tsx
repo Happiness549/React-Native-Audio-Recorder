@@ -1,16 +1,101 @@
 
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { useAudioRecorder, useAudioRecorderState, RecordingPresets, AudioModule, setAudioModeAsync } from "expo-audio";
+import { useState } from "react";
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 export default function RecordingScreen() {
   const router = useRouter();
 
+  const audioRecorder = useAudioRecorder({
+    ...RecordingPresets.HIGH_QUALITY,
+    directory: "document",
+  });
+
+  const recorderState = useAudioRecorderState(audioRecorder);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  const formatTime = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const startRecording = async () => {
+    try {
+      const permission =
+        await AudioModule.requestRecordingPermissionsAsync();
+
+      if (!permission.granted) {
+        Alert.alert(
+          "Permission required",
+          "Please allow microphone access to record audio."
+        );
+        return;
+      }
+
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+      });
+
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+
+      setHasSaved(false);
+    } catch (error) {
+      Alert.alert("Recording error", "Could not start recording.");
+      console.log(error);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      await audioRecorder.stop();
+      setHasSaved(true);
+
+      Alert.alert(
+        "Recording saved",
+        "Your voice recording has been saved successfully."
+      );
+    } catch (error) {
+      Alert.alert("Recording error", "Could not save your recording.");
+      console.log(error);
+    }
+  };
+
+  const handleRecordButton = () => {
+    if (recorderState.isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.backButton}
-        onPress={() => router.back()}
+        onPress={() => {
+          if (recorderState.isRecording) {
+            Alert.alert(
+              "Recording in progress",
+              "Stop your recording before leaving this screen."
+            );
+            return;
+          }
+
+          router.back();
+        }}
       >
         <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
       </TouchableOpacity>
@@ -20,8 +105,17 @@ export default function RecordingScreen() {
         <Text style={styles.subtitle}>Capture your thoughts</Text>
 
         <View style={styles.timerContainer}>
-          <Text style={styles.timer}>00:00</Text>
-          <Text style={styles.timerLabel}>Recording time</Text>
+          <Text style={styles.timer}>
+            {formatTime(recorderState.durationMillis)}
+          </Text>
+
+          <Text style={styles.timerLabel}>
+            {recorderState.isRecording
+              ? "Recording in progress"
+              : hasSaved
+                ? "Recording saved"
+                : "Recording time"}
+          </Text>
         </View>
 
         <View style={styles.waveform}>
@@ -35,11 +129,26 @@ export default function RecordingScreen() {
           )}
         </View>
 
-        <TouchableOpacity style={styles.recordButton} activeOpacity={0.8}>
-          <Ionicons name="mic" size={35} color="#FFFFFF" />
+        <TouchableOpacity
+          style={[
+            styles.recordButton,
+            recorderState.isRecording && styles.stopButton,
+          ]}
+          onPress={handleRecordButton}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name={recorderState.isRecording ? "stop" : "mic"}
+            size={35}
+            color="#FFFFFF"
+          />
         </TouchableOpacity>
 
-        <Text style={styles.instruction}>Tap to start recording</Text>
+        <Text style={styles.instruction}>
+          {recorderState.isRecording
+            ? "Tap to stop recording"
+            : "Tap to start recording"}
+        </Text>
       </View>
     </View>
   );
@@ -112,6 +221,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#F04482",
     justifyContent: "center",
     alignItems: "center",
+  },
+  stopButton: {
+    backgroundColor: "#D93636",
   },
   instruction: {
     color: "#A5A2BD",
