@@ -1,5 +1,12 @@
 
-import { useAudioRecorder, useAudioRecorderState, RecordingPresets, AudioModule, setAudioModeAsync } from "expo-audio";
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  AudioModule,
+  setAudioModeAsync,
+} from "expo-audio";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState } from "react";
 import {
   Text,
@@ -60,7 +67,38 @@ export default function RecordingScreen() {
 
   const stopRecording = async () => {
     try {
+      const duration = recorderState.durationMillis;
+
       await audioRecorder.stop();
+
+      const uri = audioRecorder.uri;
+
+      if (!uri) {
+        Alert.alert("Error", "Recording file could not be found.");
+        return;
+      }
+
+      const existingRecordings = await AsyncStorage.getItem("recordings");
+
+      const recordings = existingRecordings
+        ? JSON.parse(existingRecordings)
+        : [];
+
+      const newRecording = {
+        id: Date.now().toString(),
+        name: `Recording ${recordings.length + 1}`,
+        uri,
+        duration,
+        date: new Date().toISOString(),
+      };
+
+      recordings.push(newRecording);
+
+      await AsyncStorage.setItem(
+        "recordings",
+        JSON.stringify(recordings)
+      );
+
       setHasSaved(true);
 
       Alert.alert(
