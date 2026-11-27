@@ -1,9 +1,55 @@
 
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  Text,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+
+type Recording = {
+  id: string;
+  name: string;
+  uri: string;
+  duration: number;
+  date: string;
+};
 
 export const Home = () => {
   const router = useRouter();
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+
+  const loadRecordings = async () => {
+    try {
+      const savedRecordings = await AsyncStorage.getItem("recordings");
+
+      if (savedRecordings) {
+        setRecordings(JSON.parse(savedRecordings));
+      }
+    } catch (error) {
+      console.log("Error loading recordings:", error);
+    }
+  };
+
+  useEffect(() => {
+    loadRecordings();
+  }, []);
+
+  const formatTime = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleString();
+  };
 
   return (
     <View style={styles.container}>
@@ -14,16 +60,45 @@ export const Home = () => {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>My Recordings</Text>
-        <Text style={styles.recordingCount}>0 recordings</Text>
-      </View>
-
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>🎙️</Text>
-        <Text style={styles.emptyTitle}>No recordings yet</Text>
-        <Text style={styles.emptyText}>
-          Start capturing your thoughts and memories with your voice.
+        <Text style={styles.recordingCount}>
+          {recordings.length} recordings
         </Text>
       </View>
+
+      {recordings.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>🎙️</Text>
+          <Text style={styles.emptyTitle}>No recordings yet</Text>
+          <Text style={styles.emptyText}>
+            Start capturing your thoughts and memories with your voice.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={recordings}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <View style={styles.recordingCard}>
+              <View style={styles.recordingIcon}>
+                <Ionicons name="mic" size={22} color="#8B6CF6" />
+              </View>
+
+              <View style={styles.recordingInfo}>
+                <Text style={styles.recordingName}>{item.name}</Text>
+                <Text style={styles.recordingDate}>
+                  {formatDate(item.date)}
+                </Text>
+              </View>
+
+              <Text style={styles.duration}>
+                {formatTime(item.duration)}
+              </Text>
+            </View>
+          )}
+        />
+      )}
 
       <TouchableOpacity
         style={styles.recordButton}
@@ -94,11 +169,49 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
+  list: {
+    paddingBottom: 15,
+  },
+  recordingCard: {
+    backgroundColor: "#25243B",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 14,
+  },
+  recordingIcon: {
+    width: 45,
+    height: 45,
+    borderRadius: 14,
+    backgroundColor: "#302B4A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  recordingInfo: {
+    flex: 1,
+  },
+  recordingName: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  recordingDate: {
+    color: "#A5A2BD",
+    fontSize: 12,
+    marginTop: 5,
+  },
+  duration: {
+    color: "#A5A2BD",
+    fontSize: 13,
+  },
   recordButton: {
     backgroundColor: "#F04482",
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: "center",
+    marginTop: 10,
   },
   recordButtonText: {
     color: "#FFFFFF",
