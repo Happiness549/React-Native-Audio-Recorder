@@ -25,7 +25,7 @@ export default function RootLayout(){
  useEffect(()=>{
 
     console.log({location:location})
- })
+ },[location])
    
 
   return (

@@ -32,6 +32,16 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      "expo-web-browser",
+       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow RN Tutorial to access your camera",
+          "microphonePermission": "Allow RN Tutorial to access your microphone",
+          "recordAudioAndroid": true,
+          "barcodeScannerEnabled": true
+        }
       ]
     ],
     "experiments": {
