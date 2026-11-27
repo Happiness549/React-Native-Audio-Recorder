@@ -1,5 +1,5 @@
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Text,
@@ -7,9 +7,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import {
+  useAudioPlayer,
+  useAudioPlayerStatus,
+  setAudioModeAsync,
+} from "expo-audio";
 
 type Recording = {
   id: string;
@@ -19,9 +25,14 @@ type Recording = {
   date: string;
 };
 
+// Main screen
 export const Home = () => {
-  const router = useRouter();
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    setIsReady(true);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -43,6 +54,26 @@ export const Home = () => {
     }, [])
   );
 
+  // Audio player loads only after the screen has mounted.
+  if (!isReady) {
+    return <View style={styles.container} />;
+  }
+
+  return <HomeContent recordings={recordings} />;
+};
+
+// Screen content and audio playback
+const HomeContent = ({
+  recordings,
+}: {
+  recordings: Recording[];
+}) => {
+  const router = useRouter();
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  const player = useAudioPlayer(null);
+  const playerStatus = useAudioPlayerStatus(player);
+
   const formatTime = (milliseconds: number) => {
     const totalSeconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60);
@@ -53,6 +84,29 @@ export const Home = () => {
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleString();
+  };
+
+  const handlePlayback = async (recording: Recording) => {
+    try {
+      if (playingId === recording.id && playerStatus.playing) {
+        player.pause();
+        return;
+      }
+
+      // Audio mode is needed on native devices.
+      if (Platform.OS !== "web") {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          allowsRecording: false,
+        });
+      }
+
+      player.replace(recording.uri);
+      player.play();
+      setPlayingId(recording.id);
+    } catch (error) {
+      console.log("Playback error:", error);
+    }
   };
 
   return (
@@ -85,9 +139,20 @@ export const Home = () => {
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <View style={styles.recordingCard}>
-              <View style={styles.recordingIcon}>
-                <Ionicons name="mic" size={22} color="#8B6CF6" />
-              </View>
+              <TouchableOpacity
+                style={styles.recordingIcon}
+                onPress={() => handlePlayback(item)}
+              >
+                <Ionicons
+                  name={
+                    playingId === item.id && playerStatus.playing
+                      ? "pause"
+                      : "play"
+                  }
+                  size={22}
+                  color="#8B6CF6"
+                />
+              </TouchableOpacity>
 
               <View style={styles.recordingInfo}>
                 <Text style={styles.recordingName}>{item.name}</Text>
