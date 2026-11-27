@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Text,
@@ -9,7 +9,7 @@ import {
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 
 type Recording = {
   id: string;
@@ -23,21 +23,25 @@ export const Home = () => {
   const router = useRouter();
   const [recordings, setRecordings] = useState<Recording[]>([]);
 
-  const loadRecordings = async () => {
-    try {
-      const savedRecordings = await AsyncStorage.getItem("recordings");
+  useFocusEffect(
+    useCallback(() => {
+      const loadRecordings = async () => {
+        try {
+          const savedRecordings = await AsyncStorage.getItem("recordings");
 
-      if (savedRecordings) {
-        setRecordings(JSON.parse(savedRecordings));
-      }
-    } catch (error) {
-      console.log("Error loading recordings:", error);
-    }
-  };
+          if (savedRecordings) {
+            setRecordings(JSON.parse(savedRecordings));
+          } else {
+            setRecordings([]);
+          }
+        } catch (error) {
+          console.log("Error loading recordings:", error);
+        }
+      };
 
-  useEffect(() => {
-    loadRecordings();
-  }, []);
+      loadRecordings();
+    }, [])
+  );
 
   const formatTime = (milliseconds: number) => {
     const totalSeconds = Math.floor(milliseconds / 1000);
